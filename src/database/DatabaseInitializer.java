@@ -68,6 +68,18 @@ public class DatabaseInitializer {
             );
         """;
 
+        // Added for Deliverable 8 Activity Logging System
+        String sqlActivityLogs = """
+            CREATE TABLE IF NOT EXISTS activity_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                action_type TEXT NOT NULL,
+                description TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES tbl_users(user_id) ON DELETE CASCADE
+            );
+        """;
+
         try (Connection conn = DBConnection.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute(sqlUsers);
@@ -75,6 +87,7 @@ public class DatabaseInitializer {
             stmt.execute(sqlBuildOrders);
             stmt.execute(sqlAssemblyRecords);
             stmt.execute(sqlAuditLogs);
+            stmt.execute(sqlActivityLogs); // Execute activity_logs creation
             System.out.println("[DatabaseInitializer] All RigBuild tables initialized successfully.");
         } catch (SQLException e) {
             System.err.println("Database initialization failed: " + e.getMessage());

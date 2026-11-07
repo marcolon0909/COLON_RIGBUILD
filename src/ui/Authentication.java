@@ -1,15 +1,18 @@
 package ui;
 
+import dao.ActivityLogDao;
 import dao.UserDao;
 import model.User;
 import java.util.Scanner;
 
 public class Authentication {
     private final UserDao userDao;
+    private final ActivityLogDao activityLogDao;
     private final Scanner scanner;
 
     public Authentication(UserDao userDao, Scanner scanner) {
         this.userDao = userDao;
+        this.activityLogDao = new ActivityLogDao();
         this.scanner = scanner;
     }
 
@@ -58,6 +61,13 @@ public class Authentication {
         boolean success = userDao.registerUser(username, password, role);
         if (success) {
             System.out.println("Registration successful! Account status is PENDING approval.");
+
+            // Log registration event
+            activityLogDao.logAction(
+                0,
+                "USER_REGISTERED",
+                "Registered new user account for: " + username + " with role " + role
+            );
         } else {
             System.out.println("Registration failed. Username may already exist.");
         }
@@ -81,18 +91,40 @@ public class Authentication {
             return;
         }
 
+        // Automatically log successful login
+        activityLogDao.logAction(
+            user.userId(),
+            "USER_LOGIN",
+            "User " + user.username() + " (ID: " + user.userId() + ") logged in."
+        );
+
         routeToRoleMenu(user);
+
+        // Automatically log logout when returning from the role menu
+        activityLogDao.logAction(
+            user.userId(),
+            "USER_LOGOUT",
+            "User " + user.username() + " (ID: " + user.userId() + ") logged out."
+        );
     }
 
     private void routeToRoleMenu(User user) {
         System.out.println("\nWelcome, " + user.username() + "! [Role: " + user.roles() + "]");
         switch (user.roles().toUpperCase()) {
             case "ADMIN" -> {
-                AdminMenu adminMenu = new AdminMenu(userDao, scanner);
+                AdminMenu adminMenu = new AdminMenu(userDao, scanner, user.userId());
                 adminMenu.displayMenu();
             }
-            case "SALES_AGENT" -> System.out.println(">>> Redirected to BUILD ORDER MANAGEMENT...");
-            case "TECHNICIAN" -> System.out.println(">>> Redirected to ASSEMBLY & TESTING MODULE...");
+            case "SALES_AGENT" -> {
+                System.out.println(">>> Redirected to BUILD ORDER MANAGEMENT...");
+                System.out.println("Press Enter to log out...");
+                scanner.nextLine();
+            }
+            case "TECHNICIAN" -> {
+                System.out.println(">>> Redirected to ASSEMBLY & TESTING MODULE...");
+                System.out.println("Press Enter to log out...");
+                scanner.nextLine();
+            }
             default -> System.out.println("Unknown role menu.");
         }
     }

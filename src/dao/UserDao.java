@@ -6,6 +6,8 @@ import java.sql.*;
 
 public class UserDao {
 
+    private final ActivityLogDao activityLogDao = new ActivityLogDao();
+
     /**
      * Checks if a user ID exists in the database.
      */
@@ -22,9 +24,10 @@ public class UserDao {
     }
 
     /**
-     * Deliverable 7: Updates a user's role and status using a parameterized PreparedStatement.
+     * Deliverable 7 & 8: Updates a user's role and status using a parameterized PreparedStatement
+     * and automatically logs the action attributed to the admin performing it.
      */
-    public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) {
+    public boolean updateUserRoleAndStatus(int adminId, int targetUserId, String newRole, String newStatus) {
         String sql = "UPDATE tbl_users SET roles = ?, status = ? WHERE user_id = ?";
 
         try (Connection conn = DBConnection.getConnection();
@@ -32,10 +35,19 @@ public class UserDao {
 
             pstmt.setString(1, newRole.trim().toUpperCase());
             pstmt.setString(2, newStatus.trim().toUpperCase());
-            pstmt.setInt(3, userId);
+            pstmt.setInt(3, targetUserId);
 
             int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
+            if (rowsAffected > 0) {
+                // Log the action with adminId as the actor
+                activityLogDao.logAction(
+                    adminId,
+                    "USER_UPDATED",
+                    "Admin ID " + adminId + " updated User ID " + targetUserId + " role to " + newRole.trim().toUpperCase() + " and status to " + newStatus.trim().toUpperCase()
+                );
+                return true;
+            }
+            return false;
 
         } catch (SQLException e) {
             System.out.println("❌ Database Error updating user: " + e.getMessage());

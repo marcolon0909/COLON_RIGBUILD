@@ -1,34 +1,42 @@
 package ui;
 
+import dao.ActivityLogDao;
 import dao.UserDao;
+import model.ActivityLog;
+import java.util.List;
 import java.util.Scanner;
 
 public class AdminMenu {
     private final Scanner scanner;
     private final UserDao userDao;
+    private final ActivityLogDao activityLogDao;
     private final int currentAdminId;
 
     public AdminMenu() {
         this.scanner = new Scanner(System.in);
         this.userDao = new UserDao();
+        this.activityLogDao = new ActivityLogDao();
         this.currentAdminId = 1;
     }
 
     public AdminMenu(int currentAdminId) {
         this.scanner = new Scanner(System.in);
         this.userDao = new UserDao();
+        this.activityLogDao = new ActivityLogDao();
         this.currentAdminId = currentAdminId;
     }
 
     public AdminMenu(UserDao userDao, Scanner scanner) {
         this.userDao = userDao;
         this.scanner = scanner;
+        this.activityLogDao = new ActivityLogDao();
         this.currentAdminId = 1;
     }
 
     public AdminMenu(UserDao userDao, Scanner scanner, int currentAdminId) {
         this.userDao = userDao;
         this.scanner = scanner;
+        this.activityLogDao = new ActivityLogDao();
         this.currentAdminId = currentAdminId;
     }
 
@@ -42,6 +50,7 @@ public class AdminMenu {
             System.out.println("\n--- ADMIN MENU ---");
             System.out.println("1. View All Users");
             System.out.println("2. Update User Role & Status");
+            System.out.println("3. View System Activity Logs");
             System.out.println("0. Logout / Exit");
 
             choice = readIntInput("Enter choice: ");
@@ -52,6 +61,9 @@ public class AdminMenu {
                     break;
                 case 2:
                     handleUpdateUser(adminId);
+                    break;
+                case 3:
+                    handleViewActivityLogs();
                     break;
                 case 0:
                     System.out.println("Logging out from Admin menu...");
@@ -97,12 +109,38 @@ public class AdminMenu {
             return;
         }
 
-        boolean success = userDao.updateUserRoleAndStatus(targetUserId, newRole, newStatus);
+        // Pass currentAdminId as the first parameter
+        boolean success = userDao.updateUserRoleAndStatus(currentAdminId, targetUserId, newRole, newStatus);
         if (success) {
             System.out.println("✅ User ID " + targetUserId + " successfully updated to Role: " + newRole + ", Status: " + newStatus);
         } else {
             System.out.println("❌ Failed to update user.");
         }
+    }
+
+    private void handleViewActivityLogs() {
+        System.out.println("\n--- SYSTEM ACTIVITY LOGS (AUDIT TRAIL) ---");
+        List<ActivityLog> logs = activityLogDao.getAllLogs();
+
+        if (logs.isEmpty()) {
+            System.out.println("No activity logs recorded yet.");
+            return;
+        }
+
+        System.out.println("---------------------------------------------------------------------------------------------------------");
+        System.out.printf("%-5s | %-8s | %-15s | %-45s | %-20s\n", "ID", "User ID", "Action Type", "Description", "Timestamp");
+        System.out.println("---------------------------------------------------------------------------------------------------------");
+
+        for (ActivityLog log : logs) {
+            System.out.printf("%-5d | %-8d | %-15s | %-45s | %-20s\n",
+                    log.id(),
+                    log.userId(),
+                    log.actionType(),
+                    log.description(),
+                    log.timestamp()
+            );
+        }
+        System.out.println("---------------------------------------------------------------------------------------------------------");
     }
 
     // --- Input Validation Wrappers ---
